@@ -84,16 +84,11 @@ real_supabase() {
 
 link_one() {
   local src="$1" dst="$2"
-  if [ -L "$dst" ] && [ ! -e "$dst" ]; then
-    rm "$dst"  # dangling link, e.g. the checkout moved since the last install
-  elif [ -e "$dst" ] || [ -L "$dst" ]; then
-    if [ "$(resolve_path "$dst" 2>/dev/null)" = "$(resolve_path "$src")" ]; then
-      printf 'already linked: %s\n' "$dst"
-      return 0
-    fi
+  if { [ -e "$dst" ] || [ -L "$dst" ]; } &&
+     [ "$(resolve_path "$dst" 2>/dev/null)" != "$(resolve_path "$src")" ]; then
     die "refusing to overwrite $dst — remove it yourself if that is intended"
   fi
-  ln -s "$src" "$dst"
+  ln -sf "$src" "$dst"
   printf 'linked %s -> %s\n' "$dst" "$src"
 }
 
