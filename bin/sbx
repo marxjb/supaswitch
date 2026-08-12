@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# sbx — per-repo Supabase account switching.
+#
+# Tokens live in the macOS Keychain as generic passwords with service "sbx"
+# and account = profile name. This layout is go-keyring compatible, so a
+# future Go port can read existing tokens without migration.
+#
+# Repos opt in by committing a .supabase-account file containing a profile
+# name. The bundled `supabase` shim (installed ahead of the real CLI in PATH)
+# calls `sbx run`, which exports SUPABASE_ACCESS_TOKEN for that profile and
+# execs the real binary — the env var takes precedence over the CLI's own
+# stored login, so no global state changes and parallel sessions in different
+# repos use different accounts.
+set -euo pipefail
+
+SERVICE="sbx"
+ACCOUNT_FILE=".supabase-account"
+
+die() { printf 'sbx: %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+sbx — per-repo Supabase account switching
+
+Usage:
+  sbx add <profile>      store a personal access token (prompted; or piped on stdin)
+  sbx list               list stored profiles
+  sbx remove <profile>   delete a profile's token from the Keychain
+  sbx token <profile>    print a profile's token (for scripting)
+  sbx use <profile>      global switch: `supabase login` with this profile's token
+  sbx run -- <args...>   internal: entry point used by the `supabase` shim
+
+Repos select a profile with a committed .supabase-account file (profile name
+only — never a secret). An explicitly exported SUPABASE_ACCESS_TOKEN always
+wins over the file.
+EOF
+}
+
+# Follow symlinks to an absolute path (macOS bash 3.2 has no realpath -f).
+resolve_path() {
+  local p="$1" t
+  while [ -L "$p" ]; do
+    t=$(readlink "$p")
+    case "$t" in /*) p="$t" ;; *) p="$(dirname "$p")/$t" ;; esac
+  done
+  printf '%s/%s\n' "$(cd "$(dirname "$p")" && pwd -P)" "$(basename "$p")"
+}
+
+SELF=$(resolve_path "$0")
+SELF_DIR=$(dirname "$SELF")
+
+validate_profile() {
+  case "$1" in
+    "" ) die "profile name is empty" ;;
+    *[!A-Za-z0-9._-]* ) die "invalid profile name '$1' (allowed: letters, digits, . _ -)" ;;
+  esac
+}
+
+keychain_get() {
+  security find-generic-password -s "$SERVICE" -a "$1" -w 2>/dev/null
+}
+
+# First `supabase` in PATH that is not the sbx shim. The shim passes its own
+# path via --shim; additionally anything living next to this script (the shim
+# is installed side by side with sbx) is skipped, so `sbx use` bypasses the
+# shim too.
+real_supabase() {
+  local shim_res="" dir cand cand_res
+  [ -n "${1:-}" ] && shim_res=$(resolve_path "$1")
+  local IFS=':'
+  for dir in $PATH; do
+    [ -n "$dir" ] || continue
+    cand="$dir/supabase"
+    [ -f "$cand" ] && [ -x "$cand" ] || continue
+    cand_res=$(resolve_path "$cand")
+    [ "$cand_res" = "$shim_res" ] && continue
+    [ "$(dirname "$cand_res")" = "$SELF_DIR" ] && continue
+    printf '%s\n' "$cand"
+    return 0
+  done
+  return 1
+}
+
+cmd_add() {
+  local profile="${1:-}" token
+  validate_profile "$profile"
+  if [ -t 0 ]; then
+    printf "Paste the Supabase personal access token for '%s' (input hidden): " "$profile" >&2
+    IFS= read -rs token
+    printf '\n' >&2
+  else
+    IFS= read -r token
+  fi
+  case "$token" in
+    sbp_*) ;;
+    *) die "that doesn't look like a Supabase personal access token (expected sbp_...)" ;;
+  esac
+  case "$token" in
+    *[!A-Za-z0-9_]* ) die "token contains unexpected characters" ;;
+  esac
+  # security -i reads the command from stdin, keeping the token out of argv.
+  printf 'add-generic-password -U -s "%s" -a "%s" -w "%s"\n' \
+    "$SERVICE" "$profile" "$token" | security -i
+  printf "stored profile '%s'\n" "$profile"
+}
+
+cmd_list() {
+  security dump-keychain 2>/dev/null | awk -F'"' '
+    $2 == "acct" { acct = $4 }
+    $2 == "svce" && $4 == "'"$SERVICE"'" { print acct }
+  ' | sort -u
+}
+
+cmd_remove() {
+  local profile="${1:-}"
+  validate_profile "$profile"
+  security delete-generic-password -s "$SERVICE" -a "$profile" >/dev/null 2>&1 \
+    || die "no token stored for profile '$profile'"
+  printf "removed profile '%s'\n" "$profile"
+}
+
+cmd_token() {
+  local profile="${1:-}" token
+  validate_profile "$profile"
+  token=$(keychain_get "$profile") \
+    || die "no token stored for profile '$profile' (run: sbx add $profile)"
+  printf '%s\n' "$token"
+}
+
+cmd_use() {
+  local profile="${1:-}" token real
+  validate_profile "$profile"
+  token=$(keychain_get "$profile") \
+    || die "no token stored for profile '$profile' (run: sbx add $profile)"
+  real=$(real_supabase) \
+    || die "no real 'supabase' binary found in PATH (install the Supabase CLI)"
+  "$real" login --token "$token"
+  printf "global supabase login now uses profile '%s'\n" "$profile"
+}
+
+cmd_run() {
+  local shim="" dir file="" profile token real
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --shim) shim="$2"; shift 2 ;;
+      --) shift; break ;;
+      *) die "unknown option to run: $1" ;;
+    esac
+  done
+  real=$(real_supabase "$shim") \
+    || die "no real 'supabase' binary found in PATH (install the Supabase CLI)"
+  # An explicitly exported token always wins over the repo's account file.
+  if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+    dir="$PWD"
+    while :; do
+      if [ -f "$dir/$ACCOUNT_FILE" ]; then file="$dir/$ACCOUNT_FILE"; break; fi
+      [ "$dir" = "/" ] && break
+      dir=$(dirname "$dir")
+    done
+    if [ -n "$file" ]; then
+      profile=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$file" | grep -v '^$' | head -n 1) || true
+      [ -n "$profile" ] || die "$file names no profile"
+      validate_profile "$profile"
+      token=$(keychain_get "$profile") \
+        || die "profile '$profile' (from $file) has no stored token (run: sbx add $profile)"
+      export SUPABASE_ACCESS_TOKEN="$token"
+    fi
+  fi
+  exec "$real" "$@"
+}
+
+main() {
+  local cmd="${1:-}"
+  [ $# -gt 0 ] && shift
+  case "$cmd" in
+    add)    cmd_add "$@" ;;
+    list)   cmd_list ;;
+    remove) cmd_remove "$@" ;;
+    token)  cmd_token "$@" ;;
+    use)    cmd_use "$@" ;;
+    run)    cmd_run "$@" ;;
+    ""|-h|--help|help) usage ;;
+    *) die "unknown command '$cmd' (see sbx --help)" ;;
+  esac
+}
+
+main "$@"

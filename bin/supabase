@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Transparent Supabase CLI shim installed by sbx (https://github.com/marxjb/sbx).
+# Selects the Supabase account for the current repo (.supabase-account file)
+# by exporting SUPABASE_ACCESS_TOKEN, then execs the real `supabase` binary.
+exec "$(dirname "$0")/sbx" run --shim "$0" -- "$@"

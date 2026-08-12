@@ -1,0 +1,19 @@
+{
+  "owner": "marxjb",
+  "projectNumber": 10,
+  "projectUrl": "https://github.com/users/marxjb/projects/10",
+  "repo": "marxjb/sbx",
+  "projectTitle": "sbx",
+  "statuses": [
+    "Todo",
+    "In Progress",
+    "Done"
+  ],
+  "defaultStatus": "Todo",
+  "labels": [
+    "bug",
+    "enhancement",
+    "documentation"
+  ],
+  "milestones": []
+}
