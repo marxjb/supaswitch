@@ -1,2 +1,7 @@
 node_modules/
 *.tgz
+
+# Internal workflow files — kept locally, not published
+.claude/
+.github/ISSUE_TEMPLATE/
+AGENTS.md
