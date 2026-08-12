@@ -27,6 +27,7 @@
   "files": [
     "bin/sbx",
     "bin/supabase",
+    "man/sbx.1",
     "install.sh"
   ],
   "os": [

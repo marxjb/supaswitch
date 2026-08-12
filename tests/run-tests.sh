@@ -122,6 +122,18 @@ assert_eq "foreign file left intact" "foreign" "$(cat "$TMP/prefix2/supabase")"
 PREFIX="$TMP/prefix" "$ROOT/install.sh" >/dev/null 2>&1
 assert_status "re-install is idempotent" 0 $?
 
+# man(1) searches a bin dir's sibling share/man, so the page must land there.
+page="$TMP/share/man/man1/sbx.1"
+if [ -r "$page" ] && head -1 "$page" | grep -q '^\.TH SBX 1'; then
+  ok "installer puts the man page where man(1) looks"
+else
+  fail "expected a readable man page at <prefix>/../share/man/man1/sbx.1"
+fi
+if command -v mandoc >/dev/null 2>&1; then
+  lint=$(mandoc -T lint "$ROOT/man/sbx.1" 2>&1)
+  assert_eq "man page is free of roff warnings" "" "$lint"
+fi
+
 # --- summary -----------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"

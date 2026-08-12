@@ -93,11 +93,19 @@ link_one() {
 }
 
 cmd_install() {
-  local prefix="${1:-$HOME/.local/bin}" name first
+  local prefix="${1:-$HOME/.local/bin}" name first mandir
   mkdir -p "$prefix" || die "cannot create $prefix"
   for name in sbx supabase; do
     link_one "$SELF_DIR/$name" "$prefix/$name"
   done
+  # man(1) derives its search path from PATH: a bin dir's sibling share/man is
+  # picked up automatically, so `man sbx` works with no MANPATH setup.
+  mandir=$(dirname "$prefix")/share/man/man1
+  if mkdir -p "$mandir" 2>/dev/null; then
+    link_one "$SELF_DIR/../man/sbx.1" "$mandir/sbx.1"
+  else
+    printf 'warning: cannot create %s — man page not installed\n' "$mandir" >&2
+  fi
   real_supabase "$prefix/supabase" >/dev/null 2>&1 || printf \
     'warning: no real Supabase CLI in PATH — install it (brew install supabase/tap/supabase)\n' >&2
   # The shim only takes effect if it shadows the real CLI.

@@ -51,6 +51,10 @@ Either way, `sbx install` symlinks `sbx` and the `supabase` shim into
 `install.sh`). That directory must come **before** the real CLI in your `PATH`;
 the installer checks and tells you if it doesn't.
 
+It also installs the manual page, so `man sbx` works — into the bin directory's
+sibling `share/man`, which `man` picks up from your `PATH` with no `MANPATH`
+setup.
+
 Installing the npm package alone does *not* activate the shim — `sbx install`
 is a deliberate, separate step, because putting a `supabase` executable on your
 PATH is not something a package manager should do behind your back.

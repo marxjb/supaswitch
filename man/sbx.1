@@ -1,0 +1,174 @@
+.TH SBX 1 "2026-08-12" "supaswitch 1.0.0" "User Commands"
+.SH NAME
+sbx \- per\-repo Supabase account switching
+.SH SYNOPSIS
+.B sbx add
+.I profile
+.br
+.B sbx list
+.br
+.B sbx remove
+.I profile
+.br
+.B sbx token
+.I profile
+.br
+.B sbx use
+.I profile
+.br
+.B sbx install
+.RI [ directory ]
+.SH DESCRIPTION
+The Supabase CLI keeps a single global login, so working in repositories that
+belong to different Supabase accounts means re\-running
+.B supabase login
+on every switch, and two shells cannot use two accounts at the same time.
+.PP
+.B sbx
+stores one personal access token per named
+.I profile
+in the macOS Keychain, and installs a transparent
+.B supabase
+shim ahead of the real CLI in
+.BR PATH .
+On each invocation the shim looks for a
+.I .supabase\-account
+file, walking up from the current directory, and exports that profile's token
+as
+.B SUPABASE_ACCESS_TOKEN
+before executing the real binary. Because that variable takes precedence over
+the CLI's stored login and is set per process, repositories select their
+account by location, and sessions in different repositories never interfere.
+.PP
+Repositories opt in by committing a
+.I .supabase\-account
+file containing a profile name. The file holds no secret and is safe to commit.
+.SH COMMANDS
+.TP
+.B add \fIprofile\fR
+Store a Supabase personal access token under
+.IR profile .
+The token is read from a hidden prompt, or from standard input when not
+attached to a terminal, and never appears in the process arguments. Create
+tokens at https://supabase.com/dashboard/account/tokens
+.TP
+.B list
+Print the names of all stored profiles.
+.TP
+.B remove \fIprofile\fR
+Delete a profile's token from the Keychain.
+.TP
+.B token \fIprofile\fR
+Print a profile's token on standard output, for feeding other tools. Treat the
+output as a secret.
+.TP
+.B use \fIprofile\fR
+Change the
+.I global
+Supabase login to this profile by running
+.BR "supabase login" .
+This is the old\-style switch and affects every repository at once; prefer
+.I .supabase\-account
+files instead.
+.TP
+.B install \fR[\fIdirectory\fR]
+Symlink
+.B sbx
+and the
+.B supabase
+shim into
+.IR directory ,
+defaulting to
+.IR ~/.local/bin ,
+and install this manual page alongside them. Refuses to replace a file it does
+not already own. The directory must precede the real Supabase CLI in
+.BR PATH ;
+the command warns when it does not.
+.SH ACCOUNT RESOLUTION
+For each
+.B supabase
+invocation the shim resolves an account as follows.
+.IP 1. 4
+If
+.B SUPABASE_ACCESS_TOKEN
+is already set in the environment it is left untouched; an explicit token
+always wins.
+.IP 2. 4
+Otherwise the nearest
+.I .supabase\-account
+file, searching upward from the current directory, names the profile whose
+token is used. A named profile with no stored token is a fatal error, never a
+silent fall\-through to another account.
+.IP 3. 4
+Otherwise the shim changes nothing and the CLI behaves exactly as it would
+without
+.BR sbx ,
+using the global login.
+.SH FILES
+.TP
+.I .supabase\-account
+Per\-repository profile selection: one profile name.
+.B #
+comments and blank lines are ignored. Contains no secret.
+.TP
+.I ~/.local/bin/supabase
+The shim, as installed by
+.BR "sbx install" .
+.PP
+Tokens are held in the macOS Keychain as generic passwords with service
+.B sbx
+and account name equal to the profile name. They are never written to disk in
+plain text.
+.SH ENVIRONMENT
+.TP
+.B SUPABASE_ACCESS_TOKEN
+Read, and set for the child process. When already set, the shim defers to it
+and performs no lookup.
+.SH EXIT STATUS
+.B sbx
+exits 0 on success and 1 on error. When the shim delegates to the real
+Supabase CLI, that program's exit status is passed through unchanged.
+.SH EXAMPLES
+Store a token for each account, then bind two repositories to them:
+.PP
+.EX
+sbx add work
+sbx add client\-a
+echo work > ~/src/repo\-one/.supabase\-account
+echo client\-a > ~/src/repo\-two/.supabase\-account
+.EE
+.PP
+Each repository now uses its own account, including at the same time:
+.PP
+.EX
+cd ~/src/repo\-one && supabase projects list   # as work
+cd ~/src/repo\-two && supabase projects list   # as client\-a
+.EE
+.PP
+Override the repository's profile for a single command:
+.PP
+.EX
+SUPABASE_ACCESS_TOKEN=sbp_... supabase projects list
+.EE
+.SH NOTES
+A process keeps the
+.B PATH
+it started with, so shells and coding\-agent sessions started before
+.B sbx install
+continue to use the real CLI and the global login, silently and without error.
+Restart them, and confirm with
+.BR "command \-v supabase" ,
+which must print the shim's path.
+.PP
+.B "supabase link"
+state is stored per repository, under
+.IR supabase/.temp/ ,
+and is unaffected by changing accounts. A linked command that fails with an
+authorization error after a switch indicates the wrong account, not a broken
+link; no re\-link is needed.
+.SH SEE ALSO
+.BR supabase (1)
+.PP
+Project home: https://github.com/marxjb/supaswitch
+.SH LICENSE
+MIT.
