@@ -85,10 +85,18 @@ Other commands:
 
 ```bash
 sbx list             # stored profiles
+sbx add <name>       # also ROTATES: re-adding replaces that profile's token
 sbx remove <name>    # delete a profile's token from the Keychain
 sbx token <name>     # print a token (e.g. to feed other tools)
 sbx use <name>       # old-school global switch: runs `supabase login` for you
 ```
+
+**Rotating a token** — when a personal access token expires or you revoke one,
+run `sbx add <name>` again with the new token. It replaces the stored one in
+place, leaving no duplicate, and every repo bound to that profile picks up the
+new token immediately with no further changes. `sbx add` tells you which
+happened (`stored new profile` vs `replaced the token for existing profile`),
+so a mistyped name doesn't quietly overwrite a working credential.
 
 ## Resolution rules
 

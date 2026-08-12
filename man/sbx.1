@@ -51,6 +51,14 @@ Store a Supabase personal access token under
 The token is read from a hidden prompt, or from standard input when not
 attached to a terminal, and never appears in the process arguments. Create
 tokens at https://supabase.com/dashboard/account/tokens
+.IP
+This is also how a token is
+.IR rotated :
+running it again for an existing profile replaces the stored token in place,
+leaving no duplicate, and every repository bound to that profile uses the new
+token immediately. The command reports whether it stored a new profile or
+replaced an existing one, so a mistyped name does not silently overwrite a
+working credential.
 .TP
 .B list
 Print the names of all stored profiles.

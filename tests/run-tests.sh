@@ -44,10 +44,19 @@ printf '# client account\n\n%s\n' "$P_B" > "$TMP/repoB/.supabase-account"
 
 # --- profile store -----------------------------------------------------------
 
-echo "sbp_token_AAA" | sbx add "$P_A" >/dev/null
+out=$(echo "sbp_token_AAA" | sbx add "$P_A")
+assert_eq "add reports a new profile" "stored new profile '$P_A'" "$out"
 echo "sbp_token_BBB" | sbx add "$P_B" >/dev/null
 assert_eq "token roundtrip"      "sbp_token_AAA" "$(sbx token "$P_A")"
 assert_eq "list contains both"   "2"             "$(sbx list | grep -c "^sbx-test-$$-")"
+
+# Rotating a token: re-adding replaces in place and says so, rather than
+# silently overwriting a working credential on a mistyped profile name.
+out=$(echo "sbp_token_ROTATED" | sbx add "$P_A")
+assert_eq "re-add reports a replacement" "replaced the token for existing profile '$P_A'" "$out"
+assert_eq "re-add replaces the token"    "sbp_token_ROTATED" "$(sbx token "$P_A")"
+assert_eq "re-add leaves no duplicate"   "1" "$(sbx list | grep -c "^$P_A$")"
+echo "sbp_token_AAA" | sbx add "$P_A" >/dev/null  # restore for later assertions
 
 echo "not-a-token" | sbx add "$P_A" >/dev/null 2>&1
 assert_status "add rejects non-sbp token" 1 $?

@@ -1,6 +1,6 @@
 {
   "name": "supaswitch",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Per-repo Supabase account switching for humans and coding agents — named tokens in the macOS Keychain plus a transparent supabase shim, so parallel repos use different accounts without supabase login",
   "keywords": [
     "supabase",

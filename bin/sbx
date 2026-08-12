@@ -118,8 +118,9 @@ cmd_install() {
 }
 
 cmd_add() {
-  local profile="${1:-}" token
+  local profile="${1:-}" token existing=no
   validate_profile "$profile"
+  keychain_get "$profile" >/dev/null 2>&1 && existing=yes
   if [ -t 0 ]; then
     printf "Paste the Supabase personal access token for '%s' (input hidden): " "$profile" >&2
     IFS= read -rs token
@@ -137,7 +138,13 @@ cmd_add() {
   # security -i reads the command from stdin, keeping the token out of argv.
   printf 'add-generic-password -U -s "%s" -a "%s" -w "%s"\n' \
     "$SERVICE" "$profile" "$token" | security -i
-  printf "stored profile '%s'\n" "$profile"
+  # Say which happened: silently overwriting a working token on a mistyped
+  # profile name is the easy way to lose a credential.
+  if [ "$existing" = yes ]; then
+    printf "replaced the token for existing profile '%s'\n" "$profile"
+  else
+    printf "stored new profile '%s'\n" "$profile"
+  fi
 }
 
 cmd_list() {
