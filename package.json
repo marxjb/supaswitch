@@ -28,7 +28,8 @@
     "bin/sbx",
     "bin/supabase",
     "man/sbx.1",
-    "install.sh"
+    "install.sh",
+    "CHANGELOG.md"
   ],
   "os": [
     "darwin"
