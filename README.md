@@ -55,6 +55,11 @@ Installing the npm package alone does *not* activate the shim — `sbx install`
 is a deliberate, separate step, because putting a `supabase` executable on your
 PATH is not something a package manager should do behind your back.
 
+**Restart your shells afterwards.** A process keeps the `PATH` it started with,
+so terminals and coding-agent sessions launched before the install keep using
+the real CLI and your global login — silently, with no error. Confirm with
+`command -v supabase`: it must print the shim's path, not the real CLI's.
+
 ## Quickstart
 
 ```bash
