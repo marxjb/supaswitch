@@ -86,6 +86,21 @@ to the wrong account.
 `.supabase-account` format: one profile name; `#` comments and blank lines
 are ignored.
 
+## "Switching accounts broke my project link"
+
+It didn't — and this is worth understanding, because it's the other half of
+why per-repo tokens are the right model. `supabase link` writes only
+repo-local files (`supabase/.temp/project-ref` and friends); there is no
+global link state. What actually happens after a global `supabase login`
+switch is that the active account can't see the linked project, so linked
+commands fail with `401 Unauthorized` — which *looks* like a broken link.
+The link files are untouched, and switching back to the right account fixes
+everything without re-linking (verified empirically; the shim's non-
+interference with `supabase/.temp` is covered by the test suite).
+
+With sbx the wrong account is never active in the first place, so the
+symptom disappears entirely.
+
 ## Notes for coding agents
 
 Nothing to teach: agents run plain `supabase …` commands and inherit the
@@ -101,6 +116,16 @@ tokens.
 - The Keychain layout is [go-keyring](https://github.com/zalando/go-keyring)
   compatible (service `sbx`, account = profile name), so a future Go port can
   read existing tokens without migration.
+
+## Development
+
+```bash
+tests/run-tests.sh
+```
+
+Offline and deterministic: a fake `supabase` binary stands in for the real
+CLI, keychain entries are PID-namespaced and removed on exit. Runs on the
+system bash 3.2.
 
 ## Roadmap
 

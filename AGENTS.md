@@ -10,6 +10,9 @@ Hard constraint: the Keychain layout must stay compatible with `go-keyring`
 (service `sbx`, account = profile name) so a future Go port can read existing
 tokens without migration.
 
+Before merging any change, run `tests/run-tests.sh` (offline, bash 3.2
+compatible) — it must stay green, and behavior changes need a test.
+
 ## Work Tracking (GitHub Issues + Project)
 
 Tracked work lives in GitHub, not just session context.
