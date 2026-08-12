@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sbx — per-repo Supabase account switching.
+# sbx — per-repo Supabase account switching (part of supaswitch).
 #
 # Tokens live in the macOS Keychain as generic passwords with service "sbx"
 # and account = profile name. This layout is go-keyring compatible, so a
@@ -28,6 +28,7 @@ Usage:
   sbx remove <profile>   delete a profile's token from the Keychain
   sbx token <profile>    print a profile's token (for scripting)
   sbx use <profile>      global switch: `supabase login` with this profile's token
+  sbx install [dir]      symlink sbx + the supabase shim into dir (default ~/.local/bin)
   sbx run -- <args...>   internal: entry point used by the `supabase` shim
 
 Repos select a profile with a committed .supabase-account file (profile name
@@ -79,6 +80,38 @@ real_supabase() {
     return 0
   done
   return 1
+}
+
+link_one() {
+  local src="$1" dst="$2"
+  if [ -L "$dst" ] && [ ! -e "$dst" ]; then
+    rm "$dst"  # dangling link, e.g. the checkout moved since the last install
+  elif [ -e "$dst" ] || [ -L "$dst" ]; then
+    if [ "$(resolve_path "$dst" 2>/dev/null)" = "$(resolve_path "$src")" ]; then
+      printf 'already linked: %s\n' "$dst"
+      return 0
+    fi
+    die "refusing to overwrite $dst — remove it yourself if that is intended"
+  fi
+  ln -s "$src" "$dst"
+  printf 'linked %s -> %s\n' "$dst" "$src"
+}
+
+cmd_install() {
+  local prefix="${1:-$HOME/.local/bin}" name first
+  mkdir -p "$prefix" || die "cannot create $prefix"
+  for name in sbx supabase; do
+    link_one "$SELF_DIR/$name" "$prefix/$name"
+  done
+  real_supabase "$prefix/supabase" >/dev/null 2>&1 || printf \
+    'warning: no real Supabase CLI in PATH — install it (brew install supabase/tap/supabase)\n' >&2
+  # The shim only takes effect if it shadows the real CLI.
+  first=$(command -v supabase 2>/dev/null || true)
+  if [ "$first" != "$prefix/supabase" ]; then
+    printf 'warning: PATH resolves `supabase` to %s, not the sbx shim.\n' "${first:-<nothing>}" >&2
+    printf '         Add this to your shell rc, before other PATH entries:\n' >&2
+    printf '           export PATH="%s:$PATH"\n' "$prefix" >&2
+  fi
 }
 
 cmd_add() {
@@ -173,12 +206,13 @@ main() {
   local cmd="${1:-}"
   [ $# -gt 0 ] && shift
   case "$cmd" in
-    add)    cmd_add "$@" ;;
-    list)   cmd_list ;;
-    remove) cmd_remove "$@" ;;
-    token)  cmd_token "$@" ;;
-    use)    cmd_use "$@" ;;
-    run)    cmd_run "$@" ;;
+    add)     cmd_add "$@" ;;
+    list)    cmd_list ;;
+    remove)  cmd_remove "$@" ;;
+    token)   cmd_token "$@" ;;
+    use)     cmd_use "$@" ;;
+    install) cmd_install "$@" ;;
+    run)     cmd_run "$@" ;;
     ""|-h|--help|help) usage ;;
     *) die "unknown command '$cmd' (see sbx --help)" ;;
   esac

@@ -1,6 +1,7 @@
-# sbx
+# supaswitch
 
 Per-repo Supabase account switching — for humans and coding agents.
+The command you type is **`sbx`**.
 
 If you work in multiple repos that belong to different Supabase accounts, the
 stock workflow is running `supabase login --token …` every time you switch.
@@ -35,13 +36,24 @@ command runs*. Two repos, two accounts, fully in parallel.
 Requires macOS and the [Supabase CLI](https://supabase.com/docs/guides/cli).
 
 ```bash
-git clone https://github.com/marxjb/sbx.git
-cd sbx && ./install.sh
+npm install -g supaswitch && sbx install
 ```
 
-This symlinks `sbx` and the `supabase` shim into `~/.local/bin` (override with
-`PREFIX=/some/bin ./install.sh`). That directory must come **before** the real
-CLI in your `PATH`; the installer checks and tells you if it doesn't.
+Or from source:
+
+```bash
+git clone https://github.com/marxjb/supaswitch.git
+cd supaswitch && ./install.sh
+```
+
+Either way, `sbx install` symlinks `sbx` and the `supabase` shim into
+`~/.local/bin` (pass a different directory as an argument, or set `PREFIX` for
+`install.sh`). That directory must come **before** the real CLI in your `PATH`;
+the installer checks and tells you if it doesn't.
+
+Installing the npm package alone does *not* activate the shim — `sbx install`
+is a deliberate, separate step, because putting a `supabase` executable on your
+PATH is not something a package manager should do behind your back.
 
 ## Quickstart
 

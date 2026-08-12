@@ -1,0 +1,38 @@
+{
+  "name": "supaswitch",
+  "version": "1.0.0",
+  "description": "Per-repo Supabase account switching for humans and coding agents — named tokens in the macOS Keychain plus a transparent supabase shim, so parallel repos use different accounts without supabase login",
+  "keywords": [
+    "supabase",
+    "supabase-cli",
+    "account",
+    "switcher",
+    "profiles",
+    "keychain",
+    "multi-account",
+    "cli"
+  ],
+  "homepage": "https://github.com/marxjb/supaswitch#readme",
+  "bugs": "https://github.com/marxjb/supaswitch/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marxjb/supaswitch.git"
+  },
+  "license": "MIT",
+  "author": "marxjb",
+  "type": "commonjs",
+  "bin": {
+    "sbx": "bin/sbx"
+  },
+  "files": [
+    "bin/sbx",
+    "bin/supabase",
+    "install.sh"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "scripts": {
+    "test": "tests/run-tests.sh"
+  }
+}

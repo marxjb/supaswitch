@@ -1,6 +1,10 @@
-# sbx — agent instructions
+# supaswitch — agent instructions
 
-`sbx` is a small bash CLI that gives the Supabase CLI per-repo account selection:
+The project is **supaswitch** (repo + npm package); the command it installs is
+**`sbx`**, and the Keychain service string is also `sbx`. Never rename either —
+existing users' stored tokens are keyed on that service string.
+
+supaswitch is a small bash CLI that gives the Supabase CLI per-repo account selection:
 named profiles stored in the macOS Keychain plus a transparent `supabase` shim
 that exports `SUPABASE_ACCESS_TOKEN` based on a committed `.supabase-account`
 file. Keep the surface minimal — it's a shell tool meant to be auditable in one
@@ -18,7 +22,7 @@ compatible) — it must stay green, and behavior changes need a test.
 Tracked work lives in GitHub, not just session context.
 
 - **Board:** "sbx" (Projects v2, owner `marxjb`, project #10), linked to
-  `marxjb/sbx`. One **Status** field: `Todo / In Progress / Done`.
+  `marxjb/supaswitch`. One **Status** field: `Todo / In Progress / Done`.
 - **The issue is the work item; its body holds the plan** (template:
   `.github/ISSUE_TEMPLATE/work-item.md`). The issue body is the source of
   truth — keep it updated.
