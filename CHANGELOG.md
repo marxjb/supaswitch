@@ -8,6 +8,16 @@ Since `sbx` is a command-line tool, "breaking" means a change to the command
 surface, the `.supabase-account` format, or the Keychain layout — the last of
 which existing users' stored tokens depend on.
 
+## [1.0.2] - 2026-08-12
+
+### Documentation
+
+- Soften the claim in "Switching accounts broke my project link" from "It
+  didn't" to "It most likely didn't" — a 401 after switching accounts is the
+  overwhelmingly common cause, but stating it as the only possible one
+  overreached.
+- Normalize Markdown emphasis to underscores.
+
 ## [1.0.1] - 2026-08-12
 
 ### Changed
@@ -39,5 +49,6 @@ Initial release.
   refusing to replace anything it does not already own.
 - `man sbx`, installed where `man(1)` looks without any `MANPATH` setup.
 
+[1.0.2]: https://github.com/marxjb/supaswitch/releases/tag/v1.0.2
 [1.0.1]: https://github.com/marxjb/supaswitch/releases/tag/v1.0.1
 [1.0.0]: https://github.com/marxjb/supaswitch/releases/tag/v1.0.0
